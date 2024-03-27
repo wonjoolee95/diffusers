@@ -352,11 +352,16 @@ class SelfAttention1d(nn.Module):
 
         scale = 1 / math.sqrt(math.sqrt(key_states.shape[-1]))
 
-        attention_scores = torch.matmul(query_states * scale, key_states.transpose(-1, -2) * scale)
-        attention_probs = torch.softmax(attention_scores, dim=-1)
+        # attention_scores = torch.matmul(query_states * scale, key_states.transpose(-1, -2) * scale)
+        # attention_probs = torch.softmax(attention_scores, dim=-1)
 
-        # compute attention output
-        hidden_states = torch.matmul(attention_probs, value_states)
+        # # compute attention output
+        # hidden_states = torch.matmul(attention_probs, value_states)
+
+        # torch_xla flash attention
+        import torch; import torch_xla
+        from torch_xla.experimental.custom_kernel import flash_attention
+        hidden_states = flash_attention(query_states * scale, key_states.transpose(-1, -2) * scale, value_states)
 
         hidden_states = hidden_states.permute(0, 2, 1, 3).contiguous()
         new_hidden_states_shape = hidden_states.size()[:-2] + (self.channels,)
